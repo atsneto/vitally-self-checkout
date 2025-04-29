@@ -1,5 +1,6 @@
 import flet as ft
 import threading
+import random
 from models import Pessoa
 from database import Session, Base, engine
 import re
@@ -84,11 +85,10 @@ def tela_consulta(pagina: ft.Page) -> None:
     )
 
     resultado = ft.Text(size=16, text_align=ft.TextAlign.CENTER)
-    loading = ft.ProgressRing(visible=False)
 
     def consultar_cpf(e):
         raw_cpf = limpar_cpf(cpf_input.value)
-        
+
         if len(raw_cpf) != 11:
             mostrar_erro("CPF inválido! Deve conter 11 dígitos.", pagina, resultado)
             return
@@ -96,11 +96,11 @@ def tela_consulta(pagina: ft.Page) -> None:
         try:
             with Session() as session:
                 pessoa = session.query(Pessoa).filter_by(cpf=raw_cpf).first()
-                
+
                 if not pessoa:
                     mostrar_erro("CPF não encontrado!", pagina, resultado)
                     return
-                
+
                 resultado.value = ""
                 pagina.update()
                 tela_biometria(pagina, pessoa)
@@ -125,7 +125,6 @@ def tela_consulta(pagina: ft.Page) -> None:
                     on_click=consultar_cpf,
                     style=ft.ButtonStyle(bgcolor=ft.colors.BLUE_600, padding=20)
                 ),
-                loading,
                 btn_voltar
             ],
             spacing=25,
@@ -138,7 +137,7 @@ def tela_biometria(pagina: ft.Page, pessoa: Pessoa) -> None:
     """Tela de verificação biométrica"""
     pagina.clean()
     pagina.title = "Vitally - Biometria"
-    
+
     header = ft.Text(
         "Verificação Biométrica",
         size=24,
@@ -164,7 +163,6 @@ def tela_biometria(pagina: ft.Page, pessoa: Pessoa) -> None:
         e.control.visible = False
         pagina.update()
 
-        # Agendar finalização após 3 segundos
         threading.Timer(3, finalizar_verificacao).start()
 
     def finalizar_verificacao():
@@ -174,8 +172,7 @@ def tela_biometria(pagina: ft.Page, pessoa: Pessoa) -> None:
         resultado.value = "Biometria validada com sucesso"
         resultado.color = ft.colors.GREEN
         pagina.update()
-        
-        # Agendar navegação após 2 segundos
+
         threading.Timer(2, lambda: tela_temperatura(pagina)).start()
 
     pagina.add(
@@ -206,26 +203,56 @@ def tela_temperatura(pagina: ft.Page) -> None:
     """Tela de medição de temperatura"""
     pagina.clean()
     pagina.title = "Vitally - Temperatura"
-    
+
     header = ft.Text(
         "Medição de Temperatura",
         size=24,
         weight=ft.FontWeight.BOLD,
         color=ft.colors.BLUE_800
     )
-    resultado = ft.Text(size=16, text_align=ft.TextAlign.CENTER)
 
+    scan_animation = ft.Image(
+        src="images/sensor_loading.gif",
+        width=200,
+        height=200
+    )
+
+    status_text = ft.Text("Aguardando leitura do sensor...", size=16)
+    progress = ft.ProgressRing(visible=False)
+    resultado = ft.Text(size=24, weight=ft.FontWeight.BOLD)
+
+    def iniciar_medicao(e):
+        scan_animation.visible = True
+        status_text.value = "Lendo dados do sensor..."
+        progress.visible = True
+        e.control.visible = False
+        pagina.update()
+
+        def finalizar_medicao():
+            scan_animation.visible = False
+            progress.visible = False
+            status_text.value = "Medição concluída!"
+            resultado.value = f"{random.uniform(35.5, 37.5):.1f} °C"
+            resultado.color = ft.colors.GREEN
+            pagina.update()
+
+            threading.Timer(2, lambda: tela_saturacao(pagina)).start()
+
+        threading.Timer(3, finalizar_medicao).start()
 
     pagina.add(
         ft.Column(
             [
                 header,
+                scan_animation,
+                status_text,
+                progress,
+                resultado,
                 ft.ElevatedButton(
-                    "Registrar Temperatura",
-                    on_click=registrar_temperatura,
+                    "Medir Temperatura",
+                    on_click=iniciar_medicao,
                     icon=ft.icons.THERMOSTAT
                 ),
-                resultado,
                 ft.TextButton(
                     "Voltar",
                     on_click=lambda e: tela_biometria(pagina, None),
@@ -239,55 +266,132 @@ def tela_temperatura(pagina: ft.Page) -> None:
     pagina.update()
 
 def tela_saturacao(pagina: ft.Page) -> None:
-    """Tela de registro de saturação de oxigênio"""
+    """Tela de saturação de oxigênio"""
     pagina.clean()
-    pagina.title = "Vitally - Saturação de Oxigênio"
-    
+    pagina.title = "Vitally - Saturação"
+
     header = ft.Text(
-        "Registro de Saturação de Oxigênio",
+        "Medição de Saturação",
         size=24,
         weight=ft.FontWeight.BOLD,
         color=ft.colors.BLUE_800
     )
 
-    saturacao_input = ft.TextField(
-        label="Digite a saturação de oxigênio (%):",
-        hint_text="Exemplo: 98",
-        text_align=ft.TextAlign.CENTER,
-        border_color="gray",
-        border_radius=10,
-        bgcolor="white",
-        color="black",
-        width=300
+    scan_animation = ft.Image(
+        src="images/sensor_loading.gif",
+        width=200,
+        height=200
     )
 
-    resultado = ft.Text(size=16, text_align=ft.TextAlign.CENTER)
+    status_text = ft.Text("Aguardando leitura do sensor...", size=16)
+    progress = ft.ProgressRing(visible=False)
+    resultado = ft.Text(size=24, weight=ft.FontWeight.BOLD)
 
-    def registrar_saturacao(e):
-        valor = saturacao_input.value.strip()
-        if not valor.isdigit() or not (0 <= int(valor) <= 100):
-            resultado.value = "Por favor, insira um valor válido entre 0 e 100."
-            resultado.color = "red"
-        else:
-            resultado.value = f"Saturação registrada com sucesso: {valor}%"
-            resultado.color = "green"
+    def iniciar_medicao(e):
+        scan_animation.visible = True
+        status_text.value = "Lendo dados do sensor..."
+        progress.visible = True
+        e.control.visible = False
         pagina.update()
+
+        def finalizar_medicao():
+            scan_animation.visible = False
+            progress.visible = False
+            status_text.value = "Medição concluída!"
+            resultado.value = f"{random.randint(95, 100)}%"
+            resultado.color = ft.colors.GREEN
+            pagina.update()
+
+            threading.Timer(2, lambda: tela_pressao(pagina)).start()
+
+        threading.Timer(3, finalizar_medicao).start()
 
     pagina.add(
         ft.Column(
             [
                 header,
-                saturacao_input,
+                scan_animation,
+                status_text,
+                progress,
+                resultado,
                 ft.ElevatedButton(
-                    "Registrar Saturação",
-                    on_click=registrar_saturacao,
+                    "Medir Saturação",
+                    on_click=iniciar_medicao,
                     icon=ft.icons.HEALTH_AND_SAFETY
                 ),
-                resultado,
                 ft.TextButton(
                     "Voltar",
                     on_click=lambda e: tela_temperatura(pagina),
                     icon=ft.icons.ARROW_BACK
+                )
+            ],
+            spacing=25,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        )
+    )
+    pagina.update()
+
+def tela_pressao(pagina: ft.Page) -> None:
+    """Tela de pressão arterial"""
+    pagina.clean()
+    pagina.title = "Vitally - Pressão"
+
+    header = ft.Text(
+        "Medição de Pressão Arterial",
+        size=24,
+        weight=ft.FontWeight.BOLD,
+        color=ft.colors.BLUE_800
+    )
+
+    scan_animation = ft.Image(
+        src="images/sensor_loading.gif",
+        width=200,
+        height=200
+    )
+
+    status_text = ft.Text("Aguardando leitura do sensor...", size=16)
+    progress = ft.ProgressRing(visible=False)
+    resultado = ft.Text(size=24, weight=ft.FontWeight.BOLD)
+
+    def gerar_pressao():
+        sistolica = random.randint(90, 180)
+        diastolica = random.randint(60, 120)
+        return f"{sistolica}/{diastolica} mmHg"
+
+    def iniciar_medicao(e):
+        scan_animation.visible = True
+        status_text.value = "Lendo dados do sensor..."
+        progress.visible = True
+        e.control.visible = False
+        pagina.update()
+
+        def finalizar_medicao():
+            scan_animation.visible = False
+            progress.visible = False
+            status_text.value = "Medição concluída!"
+            resultado.value = gerar_pressao()
+            resultado.color = ft.colors.GREEN
+            pagina.update()
+
+        threading.Timer(3, finalizar_medicao).start()
+
+    pagina.add(
+        ft.Column(
+            [
+                header,
+                scan_animation,
+                status_text,
+                progress,
+                resultado,
+                ft.ElevatedButton(
+                    "Medir Pressão",
+                    on_click=iniciar_medicao,
+                    icon=ft.icons.MONITOR_HEART
+                ),
+                ft.TextButton(
+                    "Finalizar",
+                    on_click=lambda e: tela_inicial(pagina),
+                    icon=ft.icons.CHECK_CIRCLE
                 )
             ],
             spacing=25,
