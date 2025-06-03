@@ -13,7 +13,6 @@ class Pessoa(Base):
 
     __mapper_args__ = {
         'polymorphic_identity': 'pessoa'
-
     }
 
 class Paciente(Pessoa):
@@ -28,3 +27,10 @@ class Paciente(Pessoa):
     __mapper_args__ = {
         'polymorphic_identity': 'paciente',
     }
+
+class Sintoma(Base):
+    __tablename__ = "sintomas"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nome = Column(String(100), nullable=False)
+    grau_risco = Column(Integer, nullable=False)  # 1 a 3 (1=baixo, 2=médio, 3=alto)
