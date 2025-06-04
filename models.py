@@ -8,7 +8,7 @@ class Pessoa(Base):
     name = Column(String(100), nullable=False)
     cpf = Column(String(14), unique=True, nullable=False)
     data_nascimento = Column(Date, nullable=False)
-    sexo = Column(String(1), nullable=False)
+    sexo = Column(String(10), nullable=False)
     carteira = Column(String(15), nullable=False)
 
     __mapper_args__ = {
@@ -20,6 +20,9 @@ class Paciente(Base):
 
     id = Column(Integer, ForeignKey('pessoa.id'), primary_key=True)
     description = Column(Text, nullable=True)
+    temperatura = Column(Text, nullable=True)
+    saturacao =Column(Text, nullable=True)
+    pressao = Column(Text, nullable=True)
     risk_level = Column(Integer, nullable=True)
     data_consulta = Column(Date, nullable=True)
     hora_consulta = Column(Time, nullable=True)

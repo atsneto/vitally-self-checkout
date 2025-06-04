@@ -212,7 +212,7 @@ def tela_biometria(pagina: ft.Page) -> None:
         )
     )
     pagina.update()
-
+valor_temperatura = None
 def tela_temperatura(pagina: ft.Page) -> None:
     pagina.clean()
     pagina.title = "Vitally - Temperatura"
@@ -232,8 +232,10 @@ def tela_temperatura(pagina: ft.Page) -> None:
     leitura_ativa = False
     ser = None
 
+
     def ler_sensor():
         nonlocal leitura_ativa, ser
+        global valor_temperatura
         try:
             ser = serial.Serial('COM3', 115200, timeout=120)
             leitura_ativa = True
@@ -242,14 +244,18 @@ def tela_temperatura(pagina: ft.Page) -> None:
                 if ser.in_waiting:
                     linha = ser.readline().decode('utf-8').strip()
                     if linha:
-                        resultado.value = f"{linha}"
+                        valor_temperatura = linha
+                        resultado.value = f"{linha} Cº"
                         resultado.color = ft.Colors.GREEN
                         status_text.value = "Dados recebidos do sensor"
+
                         pagina.update()
             parar_medicao()
             status_text.value = "Medição finalizada."
+            print(valor_temperatura)
             pagina.update()
-            time.sleep(1)  # pausa breve antes de transição
+            time.sleep(6)  # pausa breve antes de transição
+
             tela_saturacao(pagina)  # redireciona após 2 minutos
         except Exception as e:
             status_text.value = f"Erro: {e}"
@@ -340,11 +346,13 @@ def tela_temperatura(pagina: ft.Page) -> None:
 #         )
 #     )
 #     pagina.update()
-
+valor_saturacao = None
 def tela_saturacao(pagina: ft.Page) -> None:
     """Tela de saturação de oxigênio"""
     pagina.clean()
     pagina.title = "Vitally - Saturação"
+    global valor_saturacao
+
 
     header = ft.Text(
         "Medição de Saturação",
@@ -372,10 +380,14 @@ def tela_saturacao(pagina: ft.Page) -> None:
 
         def finalizar_medicao():
             scan_animation.visible = False
+            global valor_saturacao
             progress.visible = False
             status_text.value = "Medição concluída!"
-            resultado.value = f"{random.randint(95, 100)}%"
+            valor_saturacao = f"{random.randint(95, 100)}"
+            text = " %"
+            resultado.value = valor_saturacao + text
             resultado.color = ft.Colors.GREEN
+            print(valor_saturacao)
             pagina.update()
 
             threading.Timer(4, lambda: tela_pressao(pagina)).start()
@@ -407,10 +419,12 @@ def tela_saturacao(pagina: ft.Page) -> None:
     )
     pagina.update()
 
+valor_pressao = None
 def tela_pressao(pagina: ft.Page) -> None:
     """Tela de pressão arterial"""
     pagina.clean()
     pagina.title = "Vitally - Pressão"
+    global valor_pressao
 
     header = ft.Text(
         "Medição de Pressão Arterial",
@@ -431,9 +445,11 @@ def tela_pressao(pagina: ft.Page) -> None:
     resultado = ft.Text(size=24, weight=ft.FontWeight.BOLD)
 
     def gerar_pressao():
+        global valor_pressao
         sistolica = random.randint(90, 180)
         diastolica = random.randint(60, 120)
-        return f"{sistolica}/{diastolica} mmHg"
+        valor_pressao = f"{sistolica}/{diastolica}"
+        return valor_pressao
 
     def iniciar_medicao(e):
         scan_animation.visible = True
@@ -446,8 +462,10 @@ def tela_pressao(pagina: ft.Page) -> None:
             scan_animation.visible = False
             progress.visible = False
             status_text.value = "Medição concluída!"
-            resultado.value = gerar_pressao()
+            text = " mmHg"
+            resultado.value = gerar_pressao() + text
             resultado.color = ft.Colors.GREEN
+            print(valor_pressao)
             pagina.update()
 
         threading.Timer(4, finalizar_medicao).start()
@@ -478,7 +496,7 @@ def tela_pressao(pagina: ft.Page) -> None:
     pagina.update()
 
 def tela_sintomas(pagina: ft.Page) -> None:
-    """Tela de sintomas"""
+    """Tela de sintomas com classificação de risco considerando sinais vitais"""
     pagina.clean()
     pagina.title = "Vitally - Sintomas"
 
@@ -490,11 +508,11 @@ def tela_sintomas(pagina: ft.Page) -> None:
     )
 
     sintomas = [
-        "Febre", "Tosse", "Dor de cabeça", "Cansaço",
+        "Tosse", "Dor de cabeça", "Cansaço",
         "Dor no corpo", "Falta de ar", "Perda de olfato", "Dor de garganta"
     ]
 
-    checkboxes = [ft.Checkbox(label=sintoma) for sintoma in sintomas]
+    checkboxes = [ft.Checkbox(label=s) for s in sintomas]
     resultado = ft.Text()
 
     def confirmar(e):
@@ -511,18 +529,39 @@ def tela_sintomas(pagina: ft.Page) -> None:
         resultado.color = ft.Colors.GREEN
         pagina.update()
 
-        # Classificação baseada em sintomas
+        # Sintomas graves definidos
         sintomas_graves = {"Falta de ar", "Febre", "Cansaço"}
         num_graves = len([s for s in selecionados if s in sintomas_graves])
+        sintomas_criticos = "Falta de ar" in selecionados and "Febre" in selecionados and "Cansaço" in selecionados
 
-        if "Falta de ar" in selecionados and "Febre" in selecionados and "Cansaço" in selecionados:
+        # Tratamento dos valores globais (todos strings)
+        try:
+            temp = float(valor_temperatura.replace(",", "."))
+            saturacao = int(valor_saturacao.strip())
+            sistolica, diastolica = map(int, valor_pressao.strip().split("/"))
+        except Exception as ex:
+            resultado.value = f"Erro ao interpretar sinais vitais: {ex}"
+            resultado.color = ft.Colors.RED
+            pagina.update()
+            return
+
+        # Verificações clínicas
+        sinais_criticos = (
+                temp < 34 or temp >= 40 or
+                saturacao < 95 or
+                sistolica < 90 or sistolica > 180 or
+                diastolica < 60 or diastolica > 120
+        )
+
+        # Lógica de classificação
+        if sintomas_criticos or sinais_criticos:
             cor = "vermelho"
         elif num_graves >= 2 or len(selecionados) >= 4:
             cor = "amarelo"
         else:
             cor = "verde"
 
-        # Redireciona para a tela de classificação após 2 segundos
+        # Redireciona após 4 segundos
         threading.Timer(4, lambda: tela_classificacao(pagina, cor)).start()
 
     btn_confirmar = ft.ElevatedButton("Confirmar", on_click=confirmar)
@@ -547,6 +586,7 @@ def tela_sintomas(pagina: ft.Page) -> None:
         )
     )
     pagina.update()
+
 
 # NOVA FUNÇÃO ADICIONADA
 def tela_classificacao(pagina: ft.Page, cor: str) -> None:
@@ -576,6 +616,9 @@ def tela_classificacao(pagina: ft.Page, cor: str) -> None:
                 paciente = Paciente(
                     id=pessoa.id,
                     description=selecionadosString,
+                    temperatura=valor_temperatura,
+                    saturacao=valor_saturacao,
+                    pressao=valor_pressao,
                     risk_level=risk_level,
                     data_consulta=datetime.date.today(),
                     hora_consulta=datetime.datetime.now().time()
