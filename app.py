@@ -75,7 +75,7 @@ def tela_consulta(pagina: ft.Page) -> None:
         "Digite seu CPF:",
         size=24,
         weight=ft.FontWeight.BOLD,
-        color=ft.colors.BLUE_800
+        color=ft.Colors.BLUE_800
     )
 
     cpf_input = ft.TextField(
@@ -85,12 +85,13 @@ def tela_consulta(pagina: ft.Page) -> None:
         text_align=ft.TextAlign.LEFT,
         width=300,
         border_radius=10,
-        prefix_icon=ft.icons.SEARCH
+        prefix_icon=ft.Icons.SEARCH
     )
 
     resultado = ft.Text(size=16, text_align=ft.TextAlign.CENTER)
 
     def consultar_cpf(e):
+        global pessoa
         raw_cpf = limpar_cpf(cpf_input.value)
 
         if len(raw_cpf) != 11:
@@ -115,7 +116,7 @@ def tela_consulta(pagina: ft.Page) -> None:
     btn_voltar = ft.TextButton(
         "Voltar",
         on_click=lambda e: tela_inicial(pagina),
-        icon=ft.icons.ARROW_BACK
+        icon=ft.Icons.ARROW_BACK
     )
 
     pagina.add(
@@ -127,7 +128,7 @@ def tela_consulta(pagina: ft.Page) -> None:
                 ft.ElevatedButton(
                     "Consultar",
                     on_click=consultar_cpf,
-                    style=ft.ButtonStyle(bgcolor=ft.colors.BLUE_600, padding=20)
+                    style=ft.ButtonStyle(bgcolor=ft.Colors.BLUE_600, padding=20)
                 ),
                 btn_voltar
             ],
@@ -146,7 +147,14 @@ def tela_biometria(pagina: ft.Page) -> None:
         "Verificação Biométrica",
         size=24,
         weight=ft.FontWeight.BOLD,
-        color=ft.colors.BLUE_800
+        color=ft.Colors.BLUE_800
+    )
+
+    nome_pessoa = ft.Text(
+        pessoa.name,
+        size=20,
+        weight=ft.FontWeight.W_600,
+        color=ft.Colors.BLUE_800
     )
 
     scan_animation = ft.Image(
@@ -164,6 +172,7 @@ def tela_biometria(pagina: ft.Page) -> None:
         status_text.value = "Analisando características faciais..."
         progress.visible = True
         header.visible = False
+        nome_pessoa.visible = False
         e.control.visible = False
         pagina.update()
 
@@ -174,7 +183,7 @@ def tela_biometria(pagina: ft.Page) -> None:
         status_text.value = "Verificação bem-sucedida!"
         progress.visible = False
         resultado.value = "Biometria validada com sucesso"
-        resultado.color = ft.colors.GREEN
+        resultado.color = ft.Colors.GREEN
         pagina.update()
 
         threading.Timer(2, lambda: tela_temperatura(pagina)).start()
@@ -183,6 +192,7 @@ def tela_biometria(pagina: ft.Page) -> None:
         ft.Column(
             [
                 header,
+                nome_pessoa,
                 scan_animation,
                 status_text,
                 progress,
@@ -194,7 +204,7 @@ def tela_biometria(pagina: ft.Page) -> None:
                 ft.TextButton(
                     "Voltar",
                     on_click=lambda e: tela_consulta(pagina),
-                    icon=ft.icons.ARROW_BACK
+                    icon=ft.Icons.ARROW_BACK
                 )
             ],
             spacing=25,
@@ -211,7 +221,7 @@ def tela_temperatura(pagina: ft.Page) -> None:
         "Medição de Temperatura",
         size=24,
         weight=ft.FontWeight.BOLD,
-        color=ft.colors.BLUE_800
+        color=ft.Colors.BLUE_800
     )
 
     scan_animation = ft.Image(src="images/sensor_loading.gif", width=200, height=200, visible=False)
@@ -233,7 +243,7 @@ def tela_temperatura(pagina: ft.Page) -> None:
                     linha = ser.readline().decode('utf-8').strip()
                     if linha:
                         resultado.value = f"{linha}"
-                        resultado.color = ft.colors.GREEN
+                        resultado.color = ft.Colors.GREEN
                         status_text.value = "Dados recebidos do sensor"
                         pagina.update()
             parar_medicao()
@@ -270,14 +280,66 @@ def tela_temperatura(pagina: ft.Page) -> None:
                 status_text,
                 progress,
                 resultado,
-                ft.ElevatedButton("Medir Temperatura", on_click=iniciar_medicao, icon=ft.icons.THERMOSTAT),
-                ft.TextButton("Voltar", on_click=lambda e: [parar_medicao(), tela_biometria(pagina, None)], icon=ft.icons.ARROW_BACK)
+                ft.ElevatedButton("Medir Temperatura", on_click=iniciar_medicao, icon=ft.Icons.THERMOSTAT),
+                ft.TextButton("Voltar", on_click=lambda e: [parar_medicao(), tela_biometria(pagina, None)], icon=ft.Icons.ARROW_BACK)
             ],
             spacing=25,
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         )
     )
     pagina.update()
+
+# def tela_temperatura(pagina: ft.Page) -> None:
+#     pagina.clean()
+#     pagina.title = "Vitally - Temperatura"
+#
+#     header = ft.Text(
+#         "Medição de Temperatura",
+#         size=24,
+#         weight=ft.FontWeight.BOLD,
+#         color=ft.Colors.BLUE_800
+#     )
+#
+#     scan_animation = ft.Image(src="images/sensor_loading.gif", width=200, height=200, visible=False)
+#     status_text = ft.Text("Aguardando leitura...", size=16)
+#     progress = ft.ProgressRing(visible=False)
+#     resultado = ft.Text(size=24, weight=ft.FontWeight.BOLD)
+#
+#     def iniciar_medicao(e):
+#         scan_animation.visible = True
+#         status_text.value = "Lendo dados simulados..."
+#         progress.visible = True
+#         e.control.visible = False
+#         pagina.update()
+#
+#         def finalizar_medicao():
+#             scan_animation.visible = False
+#             progress.visible = False
+#             status_text.value = "Medição concluída!"
+#             temp = round(random.uniform(36.0, 40.2), 1)
+#             resultado.value = f"{temp} °C"
+#             resultado.color = ft.Colors.GREEN
+#             pagina.update()
+#             threading.Timer(4, lambda: tela_saturacao(pagina)).start()
+#
+#         threading.Timer(4, finalizar_medicao).start()
+#
+#     pagina.add(
+#         ft.Column(
+#             [
+#                 header,
+#                 scan_animation,
+#                 status_text,
+#                 progress,
+#                 resultado,
+#                 ft.ElevatedButton("Medir Temperatura", on_click=iniciar_medicao, icon=ft.Icons.THERMOSTAT),
+#                 ft.TextButton("Voltar", on_click=lambda e: tela_biometria(pagina), icon=ft.Icons.ARROW_BACK)
+#             ],
+#             spacing=25,
+#             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+#         )
+#     )
+#     pagina.update()
 
 def tela_saturacao(pagina: ft.Page) -> None:
     """Tela de saturação de oxigênio"""
@@ -288,7 +350,7 @@ def tela_saturacao(pagina: ft.Page) -> None:
         "Medição de Saturação",
         size=24,
         weight=ft.FontWeight.BOLD,
-        color=ft.colors.BLUE_800
+        color=ft.Colors.BLUE_800
     )
 
     scan_animation = ft.Image(
@@ -313,12 +375,12 @@ def tela_saturacao(pagina: ft.Page) -> None:
             progress.visible = False
             status_text.value = "Medição concluída!"
             resultado.value = f"{random.randint(95, 100)}%"
-            resultado.color = ft.colors.GREEN
+            resultado.color = ft.Colors.GREEN
             pagina.update()
 
-            threading.Timer(2, lambda: tela_pressao(pagina)).start()
+            threading.Timer(4, lambda: tela_pressao(pagina)).start()
 
-        threading.Timer(3, finalizar_medicao).start()
+        threading.Timer(4, finalizar_medicao).start()
 
     pagina.add(
         ft.Column(
@@ -331,12 +393,12 @@ def tela_saturacao(pagina: ft.Page) -> None:
                 ft.ElevatedButton(
                     "Medir Saturação",
                     on_click=iniciar_medicao,
-                    icon=ft.icons.HEALTH_AND_SAFETY
+                    icon=ft.Icons.HEALTH_AND_SAFETY
                 ),
                 ft.TextButton(
                     "Voltar",
                     on_click=lambda e: tela_temperatura(pagina),
-                    icon=ft.icons.ARROW_BACK
+                    icon=ft.Icons.ARROW_BACK
                 )
             ],
             spacing=25,
@@ -354,7 +416,7 @@ def tela_pressao(pagina: ft.Page) -> None:
         "Medição de Pressão Arterial",
         size=24,
         weight=ft.FontWeight.BOLD,
-        color=ft.colors.BLUE_800
+        color=ft.Colors.BLUE_800
     )
 
     scan_animation = ft.Image(
@@ -385,10 +447,10 @@ def tela_pressao(pagina: ft.Page) -> None:
             progress.visible = False
             status_text.value = "Medição concluída!"
             resultado.value = gerar_pressao()
-            resultado.color = ft.colors.GREEN
+            resultado.color = ft.Colors.GREEN
             pagina.update()
 
-        threading.Timer(3, finalizar_medicao).start()
+        threading.Timer(4, finalizar_medicao).start()
 
     pagina.add(
         ft.Column(
@@ -401,12 +463,12 @@ def tela_pressao(pagina: ft.Page) -> None:
                 ft.ElevatedButton(
                     "Medir Pressão",
                     on_click=iniciar_medicao,
-                    icon=ft.icons.MONITOR_HEART
+                    icon=ft.Icons.MONITOR_HEART
                 ),
                 ft.TextButton(
                     "Finalizar",
                     on_click=lambda e: tela_sintomas(pagina),
-                    icon=ft.icons.CHECK_CIRCLE
+                    icon=ft.Icons.CHECK_CIRCLE
                 )
             ],
             spacing=25,
@@ -424,7 +486,7 @@ def tela_sintomas(pagina: ft.Page) -> None:
         "Selecione os sintomas apresentados",
         size=24,
         weight=ft.FontWeight.BOLD,
-        color=ft.colors.BLUE_800
+        color=ft.Colors.BLUE_800
     )
 
     sintomas = [
@@ -436,16 +498,17 @@ def tela_sintomas(pagina: ft.Page) -> None:
     resultado = ft.Text()
 
     def confirmar(e):
+        global selecionados
         selecionados = [cb.label for cb in checkboxes if cb.value]
 
         if not selecionados:
             resultado.value = "Nenhum sintoma selecionado."
-            resultado.color = ft.colors.GREY
+            resultado.color = ft.Colors.GREY
             pagina.update()
             return
 
         resultado.value = "Sintomas selecionados:\n- " + "\n- ".join(selecionados)
-        resultado.color = ft.colors.GREEN
+        resultado.color = ft.Colors.GREEN
         pagina.update()
 
         # Classificação baseada em sintomas
@@ -460,14 +523,14 @@ def tela_sintomas(pagina: ft.Page) -> None:
             cor = "verde"
 
         # Redireciona para a tela de classificação após 2 segundos
-        threading.Timer(2, lambda: tela_classificacao(pagina, cor)).start()
+        threading.Timer(4, lambda: tela_classificacao(pagina, cor)).start()
 
     btn_confirmar = ft.ElevatedButton("Confirmar", on_click=confirmar)
 
     btn_voltar = ft.TextButton(
         "Voltar",
         on_click=lambda e: tela_pressao(pagina),
-        icon=ft.icons.ARROW_BACK
+        icon=ft.Icons.ARROW_BACK
     )
 
     pagina.add(
@@ -488,34 +551,69 @@ def tela_sintomas(pagina: ft.Page) -> None:
 # NOVA FUNÇÃO ADICIONADA
 def tela_classificacao(pagina: ft.Page, cor: str) -> None:
     """Tela de classificação de risco do paciente"""
+    from models import Paciente
+    from database import Session
+    import datetime
+
     pagina.clean()
     pagina.title = "Vitally - Classificação de Risco"
 
+    # Mapeamento da cor para o nível de risco
+    cor_para_risco = {
+        "verde": 1,
+        "amarelo": 3,
+        "vermelho": 5
+    }
+    risk_level = cor_para_risco.get(cor, 1)
+
+    # Persistência do paciente
+    try:
+        with Session() as session:
+            # Verifica se já existe um paciente para essa pessoa
+            paciente = session.query(Paciente).filter_by(id=pessoa.id).first()
+            selecionadosString = ", ".join(selecionados)
+            if not paciente:
+                paciente = Paciente(
+                    id=pessoa.id,
+                    description=selecionadosString,
+                    risk_level=risk_level,
+                    data_consulta=datetime.date.today(),
+                    hora_consulta=datetime.datetime.now().time()
+                )
+                session.add(paciente)
+            else:
+                paciente.risk_level = risk_level
+                paciente.data_consulta = datetime.date.today()
+                paciente.hora_consulta = datetime.datetime.now().time()
+            session.commit()
+    except Exception as e:
+        print(f"Erro ao salvar paciente: {e}")
+
     if cor == "verde":
         cor_texto = "Classificação Verde: Pouco Urgente"
-        cor_corpo = ft.colors.GREEN
+        cor_corpo = ft.Colors.GREEN
     elif cor == "amarelo":
         cor_texto = "Classificação Amarela: Urgente"
-        cor_corpo = ft.colors.AMBER
+        cor_corpo = ft.Colors.AMBER
     elif cor == "vermelho":
         cor_texto = "Classificação Vermelha: Emergência"
-        cor_corpo = ft.colors.RED
+        cor_corpo = ft.Colors.RED
     else:
         cor_texto = "Classificação Desconhecida"
-        cor_corpo = ft.colors.GREY
+        cor_corpo = ft.Colors.GREY
 
     header = ft.Text(
         cor_texto,
         size=26,
         weight=ft.FontWeight.BOLD,
-        color=ft.colors.WHITE,
+        color=ft.Colors.WHITE,
         text_align=ft.TextAlign.CENTER
     )
 
     instrucoes = ft.Text(
         "Por favor, retire sua ficha de espera e aguarde ser chamado.",
         size=18,
-        color=ft.colors.WHITE,
+        color=ft.Colors.WHITE,
         text_align=ft.TextAlign.CENTER
     )
 
@@ -525,11 +623,11 @@ def tela_classificacao(pagina: ft.Page, cor: str) -> None:
                 [
                     header,
                     instrucoes,
-                    ft.Icon(name=ft.icons.LOCAL_PRINTSHOP, size=64, color=ft.colors.WHITE),
+                    ft.Icon(name=ft.Icons.LOCAL_PRINTSHOP, size=64, color=ft.Colors.WHITE),
                     ft.TextButton(
                         "Voltar ao início",
                         on_click=lambda e: tela_inicial(pagina),
-                        icon=ft.icons.HOME
+                        icon=ft.Icons.HOME
                     )
                 ],
                 spacing=30,

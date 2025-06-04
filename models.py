@@ -15,12 +15,12 @@ class Pessoa(Base):
         'polymorphic_identity': 'pessoa'
     }
 
-class Paciente(Pessoa):
+class Paciente(Base):
     __tablename__ = 'paciente'
 
     id = Column(Integer, ForeignKey('pessoa.id'), primary_key=True)
     description = Column(Text, nullable=True)
-    risk_level = Column(String(20), nullable=True)
+    risk_level = Column(Integer, nullable=True)
     data_consulta = Column(Date, nullable=True)
     hora_consulta = Column(Time, nullable=True)
 
